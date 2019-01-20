@@ -1,41 +1,24 @@
 import RPi.GPIO as GPIO
+import Adafruit_DHT
 
 class Device():
 
-    def __init__(self, label, pin=0):
+    def __init__(self, label, *args):
         """
-        Add a controllable device plugged on a relay.
+        Add a device controlled by relay(s).
         :param label: name of the device (string)
-        :param pin: GPIO pin number (int)
+        :param *args: GPIO pin number(s) (int)
         """
         self.name = label
-        self.relay = Relay(pin)
-
-    def enable(self, rl=None):
-        self.relay.activate()
-
-    def disable(self, rl=None):
-        self.relay.deactivate()
-
-class MultipleRelaysDevice(Device):
-
-    def __init__(self, label, pins):
-        """
-        Add a device controllable through several relays.
-        :param label: name of the device (string)
-        :param pins: GPIO pins numbers (tuple of int)
-        """
-        super().__init__(label)
         self.relays = []
-        for pin in pins:
+        for pin in args:
             self.relays.append(Relay(pin))
 
-    def enable(self, rl=None):
+    def enable(self, rl=0):
         self.relays[rl].activate()
 
-    def disable(self, rl=None):
+    def disable(self, rl=0):
         self.relays[rl].deactivate()
-
 
 class Relay():
 
@@ -64,3 +47,17 @@ class Sensor():
 
     def get_data(self):
         return GPIO.input(self.pin)
+
+class SensorDHT():
+
+    types = { '11' : Adafruit_DHT.DHT11,
+              '22' : Adafruit_DHT.DHT22,
+              '2302' : Adafruit_DHT.AM2302 }
+
+    def __init__(self, p, stype):
+        self.pin = p
+        self.st = SensorDHT.types[stype]
+
+    def read_data(self):
+        #Both humidity and temperature are None if read failed
+        return Adafruit_DHT.read_retry(self.st, self.pin)
