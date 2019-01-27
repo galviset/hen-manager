@@ -10,39 +10,44 @@ import time
 def get_time():
     fulltime = time.localtime()
     return '{}-{}-{}-{}-{}'.format(fulltime.tm_mon, fulltime.tm_mday, fulltime.tm_hour,
-                                      fulltime.tm_min, fulltime.tm_sec)
+                                   fulltime.tm_min, fulltime.tm_sec)
 
-def start_monitor(logfile):
+
+def start_monitor(logfile, pir, led):
     while True:
         movement = pir.get_data()
         if movement == 1:
             logfile.write(get_time() + 'Movement detected')
+            logfile.newline()
+            led.enable()
             for sec in range(1, 5):
-                camera.capture(args['pic']+'img'+get_time()+'.jpg')
+                camera.capture(args.pic+'img'+get_time()+'.jpg')
                 time.sleep(1)
+            led.disable()
 
-if __name__ == '___main__':
+
+if __name__ == '__main__':
     daemon = daemonizer.DaemonKiller
-    #Main script for monitoring chicken movements and image capture
+    # Main script for monitoring chicken movements and image capture
     parser = argparse.ArgumentParser()
     parser.add_argument('log', type=str, help="log file path", default=os.getenv("HOME")+"/hatch.log")
     parser.add_argument('pic', type=str, help="where the pictures will be stored", default=os.getenv("HOME"))
     args = parser.parse_args()
 
-    #Devices
+    # GPIO setup
+    # GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD)
+
+    # Devices
     light = rc.Device("light", 36)
 
-    #Sensors
+    # Sensors
     pir = rc.Sensor(11)
 
-    #Set up the camera
+    # Set up the camera
     camera = PiCamera()
     camera.rotation = 180
 
-    #GPIO setup
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BOARD)
+    log = open(args.log, 'w')
 
-    log = open(args['log'], 'w')
-
-    start_monitor(log)
+    start_monitor(log, pir, light)

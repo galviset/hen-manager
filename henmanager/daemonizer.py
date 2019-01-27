@@ -1,5 +1,6 @@
 import signal
 import sys
+import RPi.GPIO as GPIO
 
 
 class DaemonKiller:
@@ -8,4 +9,5 @@ class DaemonKiller:
         signal.signal(signal.SIGTERM, self.kill_daemon)
 
     def kill_daemon(self, signum, frame):
+        GPIO.cleanup()
         sys.exit(0)
