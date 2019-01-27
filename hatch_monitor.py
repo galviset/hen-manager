@@ -14,6 +14,7 @@ def get_time():
 
 
 def start_monitor(logfile, pir, led):
+    led.disable()
     while True:
         movement = pir.get_data()
         if movement == 1:
@@ -27,7 +28,7 @@ def start_monitor(logfile, pir, led):
 
 
 if __name__ == '__main__':
-    daemon = daemonizer.DaemonKiller
+    daemonizer.DaemonKiller.handle()
     # Main script for monitoring chicken movements and image capture
     parser = argparse.ArgumentParser()
     parser.add_argument('log', type=str, help="log file path", default=os.getenv("HOME")+"/hatch.log")

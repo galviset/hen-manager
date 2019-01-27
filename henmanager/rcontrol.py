@@ -32,11 +32,11 @@ class Relay():
         GPIO.setup(self.pin, GPIO.OUT)
 
     def activate(self):
-        GPIO.output(self.pin, 1)
+        GPIO.output(self.pin, 0)
         self.on = True
 
     def deactivate(self):
-        GPIO.output(self.pin, 0)
+        GPIO.output(self.pin, 1)
         self.on = False
 
 class Sensor():
