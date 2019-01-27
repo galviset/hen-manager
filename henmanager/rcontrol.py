@@ -55,9 +55,16 @@ class SensorDHT():
               '2302' : Adafruit_DHT.AM2302 }
 
     def __init__(self, p, stype):
+        """
+        :param p: WARNING : use GPIO number over pin number
+        :param stype: '11', '22' or '2302'
+        """
         self.pin = p
         self.st = SensorDHT.types[stype]
 
     def read_data(self):
+        """
+        :return: humidity (int), temperature (int)
+        """
         #Both humidity and temperature are None if read failed
         return Adafruit_DHT.read_retry(self.st, self.pin)
