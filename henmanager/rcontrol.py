@@ -13,6 +13,8 @@ class Device():
         self.relays = []
         for pin in args:
             self.relays.append(Relay(pin))
+        for relay in self.relays:
+            relay.deactivate()
 
     def enable(self, rl=0):
         self.relays[rl].activate()
