@@ -69,4 +69,8 @@ class SensorDHT():
         :return: humidity (int), temperature (int)
         """
         #Both humidity and temperature are None if read failed
-        return Adafruit_DHT.read_retry(self.st, self.pin)
+        data = Adafruit_DHT.read_retry(self.st, self.pin)
+        if data[0] == None:
+            print("DHT read failed !")
+            data = [0, 0]
+        return data

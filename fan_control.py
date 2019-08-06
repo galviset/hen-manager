@@ -23,12 +23,18 @@ if __name__ == '__main__':
 
     while True:
         with open(args.fan, 'r') as fanfile:
-            state = fanfile.readlines()[0]
+            try:
+                state = fanfile.readlines()[0]
+            except:
+                print("Error while reading fan state.")
+                state = "off"
 
         if state == "on" and current_state == "off":
             fan.enable()
             current_state = "on"
+            print("Fan enabled.")
         if state == "off" and current_state == "on":
             fan.disable()
             current_state = "off"
+            print("Fan disabled.")
         time.sleep(120)
