@@ -1,5 +1,5 @@
 import henmanager.rcontrol as rc
-from henmanager import daemonizer
+#from henmanager import daemonizer
 import argparse
 import os
 import time
@@ -16,7 +16,7 @@ def get_openweather_cond(city_id, api_key):
     openweather_url = 'https://api.openweathermap.org/data/2.5/' \
                       'weather?id={}&APPID={}&units=metric'.format(city_id, api_key)
     weather_data = json.loads((urllib.request.urlopen(openweather_url).read().decode("utf-8")))
-    ext_data = {"temp": weather_data['main']['temp'], "hum": weather_data['main']['humidity']}
+    ext_data = {"temp": weather_data['main']['temp'], "hum": weather_data['main']['humidity'], "sunrise": weather_data['sys']['sunrise'], "sunset": weather_data['sys']['sunset']}
 
     return ext_data
 
@@ -42,22 +42,32 @@ if __name__ == '__main__':
     
     Call this script in capture mode frequently in the day then call it in draw mode at 00:00 AM.
     """
-    daemonizer.DaemonKiller.handle()
-    curtime = time.localtime()
+    #daemonizer.DaemonKiller.handle()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', type=str, help="Mode : capture (c) or draw (d)")
     parser.add_argument('values', type=str, help="File path where the values are stored")
-    parser.add_argument('-p', '--plot', type=str, help="Path where the plot will be saved")
+    parser.add_argument('tick', type=int, help="Time between each value collection.")
     parser.add_argument('-f', '--fan', type=str, help="Path to the file containing fan state")
     args = parser.parse_args()
 
-    # Capture mode
-    if args.mode == "c":
-        GPIO.setmode(GPIO.BOARD)
-        thsensor = rc.SensorDHT(22, '22')
+    print("Setting up DHT sensor...")
+    GPIO.setmode(GPIO.BOARD)
+    thsensor = rc.SensorDHT(22, '22')
+    print("Done.")
+    print("Starting temperature and humidity logging")
+
+    while(True):
+        curtime = time.localtime()
+        # Value time starting from the first minute of the hour (eg 0, 15, 30, 45 if tick=15) 
+        if int(curtime.tm_min) % args.tick != 0:
+            time.sleep(60)
+            continue
         data = thsensor.read_data()
-        ext_d = get_openweather_cond(city_id=***REMOVED***, api_key="***REMOVED***")
+        try:
+            ext_d = get_openweather_cond(city_id=XXXXX, api_key="XXXXXXXXXXXXXXXXXXXXXXX")
+        except:
+            print("Couldn't reach OpenWeather data !")
+            ext_d = {"temp":0, "hum":0}
         if args.fan is None:
             args.fan = os.getenv("HOME") + "/fanstate"
 
@@ -87,92 +97,5 @@ if __name__ == '__main__':
                 ext_d['hum']
             ))
 
-    # Draw mode
-    elif args.mode == "d":
-        import matplotlib.pyplot as plt
-        from matplotlib.lines import Line2D
-        import numpy as np
+        time.sleep(60)
 
-        values = {'time': [], 'temp': [], 'hum': [], 'extemp': [], 'exhum': []}
-        with open(args.values + "values-{}-{}.csv".format(curtime.tm_mon, curtime.tm_mday), 'r') as log:
-            lines = log.readlines()
-            for line in lines:
-                line = line.split(",")
-                digitime = float(line[0]) + (float(line[1]) / 60)
-                values['time'].append(digitime)
-                values['temp'].append(float(line[2]))
-                values['hum'].append(float(line[3]))
-                values['extemp'].append(float(line[4]))
-                values['exhum'].append(float(line[5]))
-
-        mint = min(values['time'])
-        maxt = max(values['time'])
-        mintemp = min(values['temp'])
-        maxtemp = max(values['temp'])
-        minextemp = min(values['extemp'])
-        maxextemp = max(values['extemp'])
-
-        # Temperature statistics
-        tempstat = ""
-        tempstat += "max T° = " + str(maxtemp) + "°C\n"
-        tempstat += "min T°  = " + str(mintemp) + "°C\n"
-        tempstat += "deltaT° = " + str("%.2f" % (maxtemp - mintemp)) + "°C"
-
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-        # Temperatures
-        axtemp = ax1.plot(values['time'], values['temp'], 'r-', label="Temperature interne")
-        axextemp = ax1.plot(values['time'], values['extemp'], 'xkcd:orange', label="Temperature locale")
-        ax1.set_xlabel('Heure de la journee')
-        ax1.set_ylabel('Temperature (°C)', color='r')
-        ax1.tick_params('y', colors='r')
-        if mintemp < minextemp: bot = mintemp
-        else: bot = minextemp
-        if maxtemp > maxextemp: tp = maxtemp
-        else: tp = maxextemp
-        ax1.set_ylim(bottom=bot, top=tp)
-        ax1.set_title("Conditions du poulailler le {}/{}/{}".format(curtime.tm_mday, curtime.tm_mon, curtime.tm_year))
-        hightemp = Line2D([mint, maxt], [35, 35], linewidth=0.5, linestyle='--', color='xkcd:brick red')
-        ax1.add_line(hightemp)
-        if maxtemp > 35:
-            ax1.text(0, 35.5, "T° max reco.", fontsize=7, color='xkcd:dark red')
-        if maxt>=12:
-            ax1.xaxis.set_ticks(np.arange(0, maxt, step=round(maxt/12)))
-        else:
-            import math
-            ax1.xaxis.set_ticks(np.arange(0, maxt, step=math.ceil(maxt/12)))
-
-        # Humidities
-        ax2 = ax1.twinx()
-        axhum = ax2.plot(values['time'], values['hum'], 'b-', label="Humidite interne")
-        axexhum = ax2.plot(values['time'], values['exhum'], 'xkcd:sky blue', label="Humidite locale")
-        ax2.set_ylabel('Humidite (%)', color='b')
-        ax2.tick_params('y', colors='b')
-        ax2.set_ylim(bottom=0, top=100)
-        highhum = Line2D([mint, maxt], [75, 75], linewidth=0.5, linestyle='--', color=(0, 0.2, 0.8, 0.2))
-        lowhum = Line2D([mint, maxt], [50, 50], linewidth=0.5, linestyle='--', color=(0, 0.2, 0.8, 0.2))
-
-        ax2.text(0, 75.5, "%H max reco.", fontsize=6, color='xkcd:grey blue')
-        ax2.text(0, 50.5, "%H min reco.", fontsize=6, color='xkcd:grey blue')
-        ax2.add_line(highhum)
-        ax2.add_line(lowhum)
-
-        # fig.tight_layout()
-        axes = axtemp + axextemp + axhum + axexhum
-        axeslabels = [l.get_label() for l in axes]
-        box = ax1.get_position()
-        ax1.set_position([box.x0-0.02, box.y0 + 0.15, box.width, box.height * 0.85])
-        ax2.set_position([box.x0-0.02, box.y0 + 0.15, box.width, box.height * 0.85])
-        plt.legend(axes, axeslabels, fontsize=7, bbox_to_anchor=(0.285, -0.13))
-        statbox = plt.text(0.385 * maxt, -28, tempstat, fontsize=7,
-                           bbox=dict(facecolor='w', edgecolor=(0,0,0,0.12), pad=2))
-
-        plotname = "plot-{}-{}.png".format(curtime.tm_mon, curtime.tm_mday)
-        # plt.show()
-        if args.plot is None:
-            args.plot = os.getenv("HOME") + "/"
-        plt.savefig(args.plot + plotname, dpi=400, facecolor='xkcd:light grey')
-
-    else:
-        print("Usage : sudo python3 temperature_log.py c|d /home/user/temp.csv -p /home/user/plots/")
-        exit(0)
