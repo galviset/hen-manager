@@ -44,6 +44,7 @@ if __name__ == '__main__':
     Call this script in capture mode frequently in the day then call it in draw mode at 00:00 AM.
     """
     #daemonizer.DaemonKiller.handle()
+
     config = configparser.RawConfigParser()
     config.read("conf.cfg")
     ow_city = config.getstr('OpenWeather', 'City_ID')
@@ -78,7 +79,6 @@ if __name__ == '__main__':
             ext_d = {"temp":0, "hum":0}
         if fan is None:
             fan = os.getenv("HOME") + "/fanstate"
-
         fan_control_tresholds(high_temp=28.0,
                               high_hum=70.0,
                               low_hum=60.0,
