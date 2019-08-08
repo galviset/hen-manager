@@ -6,6 +6,7 @@ import time
 import RPi.GPIO as GPIO
 import urllib.request
 import json
+import configparser
 
 
 def get_openweather_cond(city_id, api_key):
@@ -43,6 +44,13 @@ if __name__ == '__main__':
     Call this script in capture mode frequently in the day then call it in draw mode at 00:00 AM.
     """
     #daemonizer.DaemonKiller.handle()
+    config = configparser.RawConfigParser()
+    config.read("conf.cfg")
+    ow_city = config.getstr('OpenWeather', 'City_ID')
+    ow_key = config.getstr('OpenWeather', 'API_key')
+    tick = config.getint('OpenWeather', 'frequency')
+    fan = config.getstr('Main', 'fan_file')
+    values = config.getstr('Main', 'values_t_h')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('values', type=str, help="File path where the values are stored")
@@ -59,17 +67,17 @@ if __name__ == '__main__':
     while(True):
         curtime = time.localtime()
         # Value time starting from the first minute of the hour (eg 0, 15, 30, 45 if tick=15) 
-        if int(curtime.tm_min) % args.tick != 0:
+        if int(curtime.tm_min) % tick != 0:
             time.sleep(60)
             continue
         data = thsensor.read_data()
         try:
-            ext_d = get_openweather_cond(city_id=XXXXX, api_key="XXXXXXXXXXXXXXXXXXXXXXX")
+            ext_d = get_openweather_cond(city_id=ow_city, api_key=ow_key)
         except:
             print("Couldn't reach OpenWeather data !")
             ext_d = {"temp":0, "hum":0}
-        if args.fan is None:
-            args.fan = os.getenv("HOME") + "/fanstate"
+        if fan is None:
+            fan = os.getenv("HOME") + "/fanstate"
 
         fan_control_tresholds(high_temp=28.0,
                               high_hum=70.0,
@@ -77,7 +85,7 @@ if __name__ == '__main__':
                               temp=data[1],
                               hum=data[0],
                               ext_hum=float(ext_d['hum'])+10.0,
-                              fan_file=args.fan
+                              fan_file=fan
                               )
         # # Fan control
         # if data[1] > 30.0 or data[0] > 70.0:
@@ -87,7 +95,7 @@ if __name__ == '__main__':
         #     with open(args.fan, 'w') as fanstate:
         #         fanstate.write("off")
         # Output data into a csv file
-        with open(args.values + "values-{}-{}.csv".format(curtime.tm_mon, curtime.tm_mday), 'a') as log:
+        with open(values + "values-{}-{}.csv".format(curtime.tm_mon, curtime.tm_mday), 'a') as log:
             log.write('{},{},{},{},{},{}\n'.format(
                 curtime.tm_hour,
                 curtime.tm_min,
