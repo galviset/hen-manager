@@ -1,3 +1,6 @@
 .idea/
 *pychache__/
 henmanager/__pycache__/
+.temperature_log.py.swo
+__pycache__/
+conf.cfg
