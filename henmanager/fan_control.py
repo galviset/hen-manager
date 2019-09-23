@@ -1,5 +1,5 @@
-import henmanager.rcontrol as rc
-from henmanager import daemonizer
+import rcontrol as rc
+import daemonizer
 import os
 import time
 import argparse

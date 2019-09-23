@@ -1,4 +1,4 @@
-import henmanager.rcontrol as rc
+import rcontrol as rc
 #from henmanager import daemonizer
 import argparse
 import os

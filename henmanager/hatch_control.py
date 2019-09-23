@@ -2,8 +2,8 @@ import time
 import RPi.GPIO as GPIO
 import temperature_log as tl
 import argparse
-from henmanager import rcontrol as rc
-from henmanager import daemonizer
+import rcontrol as rc
+import daemonizer
 import configparser
 import os
 

@@ -1,5 +1,5 @@
-from henmanager import rcontrol as rc
-from henmanager import daemonizer
+import rcontrol as rc
+import daemonizer
 from picamera import PiCamera
 import RPi.GPIO as GPIO
 import argparse
