@@ -9,6 +9,9 @@ import os
 
 def move_hatch(movetime, timeoffset, action):
     curtime = time.localtime()
+    GPIO.setmode(GPIO.BOARD)
+    # Motor control (0:up 1:down)
+    motor = rc.Device("motor", 40, 38)
     movehour = int(movetime.split(",")[0])
     movemin = int(movetime.split(",")[1])
     if curtime.tm_hour == movehour:
@@ -24,6 +27,7 @@ def move_hatch(movetime, timeoffset, action):
                 time.sleep(5)
                 motor.disable(0)
                 print("Hatch closed")
+    GPIO.cleanup()
 
 if __name__ == "__main__":
     """
@@ -33,7 +37,7 @@ if __name__ == "__main__":
     script_file = os.path.realpath(__file__)
     script_dir = script_file.split('/')
     wd = '/'
-    for i in range(1, len(script_dir)-1):
+    for i in range(1, len(script_dir)-2):
         wd += script_dir[i]+'/'
     os.chdir(wd)
 
@@ -57,9 +61,6 @@ if __name__ == "__main__":
     risetime = str(sunrise.tm_hour)+","+str(sunrise.tm_min)
     dusktime = str(sunset.tm_hour)+","+str(sunset.tm_min)
 
-    GPIO.setmode(GPIO.BOARD)
-    # Motor control (0:up 1:down)
-    motor = rc.Device("motor", 40, 38)
     print("Hatch control enabled")
     if sun_o_c == "n":
         print("Manual mode")

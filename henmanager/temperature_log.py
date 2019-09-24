@@ -35,6 +35,8 @@ def fan_control_tresholds(high_temp, high_hum, low_hum, temp, hum, ext_hum, fan_
                 fanstate.write("off")
             elif temp < low_temp:
                 fanstate.write("off")
+            else:
+                fanstate.write("off")
 
 
 if __name__ == '__main__':
@@ -49,7 +51,7 @@ if __name__ == '__main__':
     script_file = os.path.realpath(__file__)
     script_dir = script_file.split('/')
     wd ='/'
-    for i in range(1, len(script_dir)-1):
+    for i in range(1, len(script_dir)-2):
         wd += script_dir[i]+'/'
     os.chdir(wd)
 
@@ -61,10 +63,10 @@ if __name__ == '__main__':
     fan = config.get('main', 'fan_file')
     values = config.get('main', 'values_t_h')
     #Fan values
-    temp_act = config.get('fan', 'temp_act')
-    temp_deact = config.get('fan', 'temp_deact')
-    hum_act = config.get('fan', 'hum_act')
-    hum_deact = config.get('fan', 'hum_deact')
+    temp_act = config.getfloat('fan', 'temp_act')
+    temp_deact = config.getfloat('fan', 'temp_deact')
+    hum_act = config.getfloat('fan', 'hum_act')
+    hum_deact = config.getfloat('fan', 'hum_deact')
 
 
     parser = argparse.ArgumentParser()
@@ -77,6 +79,7 @@ if __name__ == '__main__':
     GPIO.setmode(GPIO.BOARD)
     thsensor = rc.SensorDHT(22, '22')
     print("Done.")
+    print("Fan state file : "+fan)
     print("Starting temperature and humidity logging")
 
     while(True):
@@ -100,15 +103,8 @@ if __name__ == '__main__':
                               hum=data[0],
                               ext_hum=float(ext_d['hum'])+10.0,
                               fan_file=fan,
-                              low_temp=temp_act
+                              low_temp=temp_deact
                               )
-        # # Fan control
-        # if data[1] > 30.0 or data[0] > 70.0:
-        #     with open(args.fan, 'w') as fanstate:
-        #         fanstate.write("on")
-        # elif data[0] < 55.0:
-        #     with open(args.fan, 'w') as fanstate:
-        #         fanstate.write("off")
         # Output data into a csv file
         with open(values + "values-{}-{}.csv".format(curtime.tm_mon, curtime.tm_mday), 'a') as log:
             log.write('{},{},{},{},{},{}\n'.format(

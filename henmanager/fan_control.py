@@ -14,9 +14,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--fan', type=str, help="Path to the file containing fan state")
     args = parser.parse_args()
-    GPIO.setmode(GPIO.BOARD)
-
-    fan = rc.Device('fan', 32)
     current_state = "off"
     if args.fan is None:
         args.fan = os.getenv("HOME") + "/fanstate"
@@ -30,11 +27,17 @@ if __name__ == '__main__':
                 state = "off"
 
         if state == "on" and current_state == "off":
+            GPIO.setmode(GPIO.BOARD)
+            fan = rc.Device('fan', 32)
             fan.enable()
             current_state = "on"
             print("Fan enabled.")
+            GPIO.cleanup()
         if state == "off" and current_state == "on":
+            GPIO.setmode(GPIO.BOARD)
+            fan = rc.Device('fan', 32)
             fan.disable()
             current_state = "off"
             print("Fan disabled.")
+            GPIO.cleanup()
         time.sleep(120)
