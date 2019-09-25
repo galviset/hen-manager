@@ -31,7 +31,7 @@ python-dateutil==2.5.3
 python-dotenv==0.10.3
 pytz==2016.7
 pyxdg==0.25
-requests==2.12.4
+requests==2.20.0
 rpi-ws281x==4.1.0
 RPi.GPIO==0.6.5
 SecretStorage==2.3.1
