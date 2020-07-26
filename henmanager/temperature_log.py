@@ -96,10 +96,19 @@ if __name__ == '__main__':
             ext_d = {"temp":0, "hum":0}
         if fan is None:
             fan = os.getenv("HOME") + "/fanstate"
+        fantemp = 0
+        if data[1] == 0.0:
+            #Workaround when the temp sensor doesn't work
+            if ext_d['temp'] > 20.0:
+                fantemp = ext_d['temp'] * 1.25 #Temp multiplier to take into account the poor heat evacuation of the henhouse
+            else:
+                fantemp = ext_d['temp']
+        else:
+            fantemp = data[1]
         fan_control_tresholds(high_temp=temp_act,
                               high_hum=hum_act,
                               low_hum=hum_deact,
-                              temp=data[1],
+                              temp=fantemp,
                               hum=data[0],
                               ext_hum=float(ext_d['hum'])+10.0,
                               fan_file=fan,

@@ -6,28 +6,84 @@ import rcontrol as rc
 import daemonizer
 import configparser
 import os
+import schedule
+import math
 
-def move_hatch(movetime, timeoffset, action):
-    curtime = time.localtime()
-    GPIO.setmode(GPIO.BOARD)
-    # Motor control (0:up 1:down)
-    motor = rc.Device("motor", 40, 38)
-    movehour = int(movetime.split(",")[0])
-    movemin = int(movetime.split(",")[1])
-    if curtime.tm_hour == movehour:
-        if curtime.tm_min == movemin:
-            time.sleep(timeoffset*60)
-            if action == "open":
-                motor.enable(1)
-                time.sleep(4)
-                motor.disable(1)
-                print("Hatch opened")
-            elif action == "close":
-                motor.enable(0)
-                time.sleep(5)
-                motor.disable(0)
-                print("Hatch closed")
-    GPIO.cleanup()
+class HatchControler():
+    def __init__(self, pin_up, pin_down):
+        self.pin_up = 40
+        self.pin_down = 38
+        #Time
+        self.sunrise = None
+        self.sunset = None
+        #Offset
+        self.offset_morning = None
+        self.offset_evening = None
+        self.open_time = None
+        self.close_time = None
+
+    def schedule_times(self):
+        print("Opening at : "+self.open_time)
+        print("Closing at :"+self.close_time)
+        schedule.every().day.at(self.open_time).do(self.move_hatch, "open")
+        schedule.every().day.at(self.close_time).do(self.move_hatch, "close")
+        return schedule.CancelJob
+
+    def move_hatch(self, action):
+        GPIO.setmode(GPIO.BOARD)
+        # Motor control (0:up 1:down)
+        motor = rc.Device("motor", self.pin_up, self.pin_down)
+        if action == "open":
+           motor.enable(1)
+           time.sleep(5)
+           motor.disable(1)
+           time.sleep(5)
+           print("Hatch opened")
+        elif action == "close":
+           motor.enable(0)
+           time.sleep(5)
+           motor.disable(0)
+           time.sleep(5)
+           print("Hatch closed")
+        GPIO.cleanup()
+        return schedule.CancelJob
+
+    def getOpenWeatherSun(self, owcity_id, owapi_key):
+        # Get sunrise and sunset time
+        print("Getting OpenWeather data")
+        for i in range(0,5):
+            while True:
+                try:
+                    weather_data = tl.get_openweather_cond(owcity_id, owapi_key)
+                except:
+                    continue
+                break
+        hatch.sunrise = time.localtime(weather_data['sunrise'])
+        hatch.sunset = time.localtime(weather_data['sunset'])      
+        risetime = str(self.sunrise.tm_hour)+","+str(self.sunrise.tm_min)
+        dusktime = str(self.sunset.tm_hour)+","+str(self.sunset.tm_min)
+        print("Sunrise : "+risetime)
+        print("Sunset : "+dusktime)
+        return
+
+    def calculateControlerOffsets(self):
+        results = self.calculateOffset(hatch.sunrise, hatch.offset_morning)
+        hatch.open_time = "{0}:{1}".format(results[0], results[1])
+        results = self.calculateOffset(hatch.sunset, hatch.offset_evening)
+        hatch.close_time = "{0}:{1}".format(results[0], results[1])
+
+
+    def calculateOffset(self, initial_time, offset):
+        total_min = initial_time.tm_hour*60+initial_time.tm_min
+        total_result = total_min + offset
+        result_hour = str(math.floor(total_result/60))
+        result_min = str(total_result%60)
+        if len(result_hour) == 1:
+            result_hour = "0"+result_hour
+        if len(result_min) == 1:
+            result_min = "0"+result_min
+        return result_hour, result_min
+
 
 if __name__ == "__main__":
     """
@@ -45,6 +101,9 @@ if __name__ == "__main__":
     #parser.add_argument('offset', type=int, help="Offset time from the sunrise and sunset. Setting 30 will delay hatch opening and closing by 30 minutes.")
     #args = parser.parse_args()
 
+    hatch = HatchControler('40', '38')
+
+    #Read configuration
     config = configparser.ConfigParser()
     config.read("conf.cfg")
     ow_city = config.get('openweather', 'City_ID')
@@ -52,63 +111,32 @@ if __name__ == "__main__":
     sun_o_c = config.get('hatch', 'sun_o_c')
     openhour = config.get('hatch', 'openhour')
     closehour = config.get('hatch', 'closehour')
-    offset = config.getint('hatch', 'offset')
+    hatch.offset_morning = config.getint('hatch', 'offset_morning')
+    hatch.offset_evening = config.getint('hatch', 'offset_evening')
 
-    weather_data = tl.get_openweather_cond(city_id=ow_city, api_key=ow_key)
+    #Initialize script
     curday = time.localtime().tm_mday
-    sunrise = time.localtime(weather_data['sunrise'])
-    sunset = time.localtime(weather_data['sunset'])
-    risetime = str(sunrise.tm_hour)+","+str(sunrise.tm_min)
-    dusktime = str(sunset.tm_hour)+","+str(sunset.tm_min)
+    hatch.getOpenWeatherSun(ow_city, ow_key)
+    hatch.calculateControlerOffsets()
+    starting_script = True
 
     print("Hatch control enabled")
-    if sun_o_c == "n":
-        print("Manual mode")
-    elif sun_o_c == "y" or sun_o_c == "o":
-        print("Sunrise/Sunset mode")
-        print("Sunrise : "+risetime)
-        print("Sunset : "+dusktime)
-
+    if sun_o_c == "y" or sun_o_c == "o":
+        hatch.calculateControlerOffsets()
+        schedule.every().day.at("00:01").do(hatch.getOpenWeatherSun, ow_city, ow_key)
+        schedule.every().day.at("00:10").do(hatch.calculateControlerOffsets)
     while True:
         curtime = time.localtime()
-        # Reset at midnight
-        if curday != curtime.tm_mday :
+        schedule.run_pending()
+        if curtime.tm_mday != curday or starting_script:
+            starting_script = False
             curday = curtime.tm_mday
-            weather_data = tl.get_openweather_cond(city_id=ow_city, api_key=ow_key)
-            print("Refreshing OpenWeather data")
-
-            # Get sunrise and sunset time
-            sunrise = time.localtime(weather_data['sunrise'])
-            sunset = time.localtime(weather_data['sunset'])      
-            risetime = str(sunrise.tm_hour)+","+str(sunrise.tm_min)
-            dusktime = str(sunset.tm_hour)+","+str(sunset.tm_min)
-            print("Sunrise : "+risetime)
-            print("Sunset : "+dusktime)
-
-        # Manual mode
-        '''
-        if curtime.tm_hour == sunrise.tm_hour :
-            if curtime.tm_min == sunrise.tm_min :
-                time.sleep(offset*60)
-                motor.enable(1)
-                time.sleep(4)
-                motor.disable(1)
-                print("Hatch opened")
-
-        if curtime.tm_hour == sunset.tm_hour:
-            if curtime.tm_min == sunset.tm_min:
-                time.sleep(offset*60)
-                motor.enable(0)
-                time.sleep(5)
-                motor.disable(0)
-                print("Hatch closed")
-        '''
-        if sun_o_c == "n":         
-            move_hatch(openhour, offset, "open")
-            move_hatch(closehour, offset, "close")
-        elif sun_o_c == "y" or sun_o_c == "o":
-            move_hatch(risetime, offset, "open")
-            move_hatch(dusktime, offset, "close")
-
-        time.sleep(60)
-
+            if sun_o_c == "n":
+                print("Manual mode")
+                hatch.open_time = openhour
+                hatch.close_time = closehour
+                hatch.schedule_times()
+            elif sun_o_c == "y" or sun_o_c == "o":
+                print("Sun mode")
+                hatch.schedule_times()
+        time.sleep(30)

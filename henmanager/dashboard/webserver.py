@@ -1,5 +1,6 @@
 from flask import render_template
 from flask import Flask
+from flask import request
 
 dashboard = Flask(__name__)
 
@@ -7,6 +8,9 @@ dashboard = Flask(__name__)
 @dashboard.route('/index')
 def index():
     user = {'username': 'Touillet'}
+    if request.method == 'POST':
+        if request.form['test_button'] == "Test":
+            print("Hooray!")
     return render_template('index.html', title='Dashboard', hatch='Open', user=user)
 
 if __name__ == "__main__":
